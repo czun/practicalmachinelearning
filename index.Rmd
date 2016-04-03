@@ -1,0 +1,96 @@
+---
+title: "Machine Learning Course Project"
+author: "C.Z."
+date: "April 03, 2016"
+output: html_document
+---
+#Introduction
+The purpose of this assignment is to predict the manner in which participants performed weight-lifing excercises. This assignment uses data from the Human Activity Recognition Study, in which male participants between ages 20-28, were asked to perform barbell lifts in five different ways. These five different manners are categorized as the following:
+
+Correctly -> Class A
+Throwing the elbows to the front -> Class B
+Lifting the dumbbell only halfway -> Class C
+Lowering the dumbbell only halfway -> Class D
+Throwing the hips to the front -> Class E
+
+Data was collected using accelerometers placed on the belt, forearm, arm, and dumbell of participants. Using data from 6 participants, I will try to create a model to predict the manner in which 20 participants conducted weight-lifting exercises.
+
+#Loading & Preprocessing Data
+
+I removed all columns that were missing data or were not relevent to data gathered from sensors.
+
+```{r, echo = TRUE}
+library(caret)
+library(randomForest)
+#Load Training and Testing Data
+setwd("~/Desktop/DataScienceSpecialization/MachineLearning")
+Training <- read.csv("pml-training.csv")
+Testing <- read.csv("pml-testing.csv")
+
+#Remove columns with no data or NAs
+Training <- subset(Training, select = -c(12:36, 50:59,69:83,87:100))
+Training <- subset(Training, select = -c(37, 39:48, 61:75, 77:86))
+Testing <- subset(Testing, select = -c(12:36, 50:59,69:83,87:100))
+Testing <- subset(Testing, select = -c(37, 39:48, 61:75, 77:86))
+
+#Remove columns not relevent to data gathered from sensors (user names, timestamps, and window numbers)
+Training <- subset(Training, select = -c(1:7))
+Testing <- subset(Testing, select = -c(1:7))
+```
+
+#Cross-Validation
+
+I split the training set into a smaller training set (Training1) and test/validation set (Test1):
+
+```{r, echo = TRUE}
+library(rattle)
+set.seed(1234)
+inTrain <- createDataPartition(y=Training$classe, p = .7, list = FALSE)
+Training1 <- Training[inTrain, ]
+Test1 <- Training[-inTrain, ]
+```
+
+#Building a Random Forest Model
+
+I decided to use a random forest model as my final model because of the very high accuracy rate (error rate is .64%).
+
+```{r, echo = TRUE, cache=TRUE}
+modFit2 <- train(classe ~., method = "rf", data=Training1, allowParallel = TRUE, preProcess = c("center", "scale"))
+print(modFit2$finalModel)
+```
+
+
+#Predict validation set
+
+Given the confusion matrix, the accuracy rate if very high (99.49%)
+```{r, echo=TRUE}
+predictfinal1 <- predict(modFit2, newdata = Test1)
+confusionMatrix(predictfinal1,Test1$classe)
+```
+
+#Applying the Random Forest Model to the Testing Set 
+```{r, echo = TRUE}
+predictfinal2 <- predict(modFit2, newdata = Testing)
+
+#The 20 participants are predicted to be in the following classes:
+predictfinal2
+```
+
+#Tables and Graphs
+
+Table 1: Most important variables:
+```{r, echo = TRUE}
+varImp(modFit2)
+
+plot(varImp(modFit2), top = 10, main = "Top 10 Importance Predictors")
+
+#Accuracy of Predictors
+plot(modFit2, main = "Accuracy of Predictors")
+
+#Plot of Errors
+plot(modFit2$finalModel, main = "Final Model")
+```
+
+
+#Conclusion
+The aim of this project is to create an accurate prediction model on various way to condcut weightlifting excercises using data collected through accelerometers. The final random forest model appears to be extremely accurate.
